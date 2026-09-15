@@ -1,0 +1,89 @@
+#!/bin/bash
+#
+# This is a wrapper around ansible / ansible-playbook.
+#
+# Usage ("ansible" mode):
+#
+#   ./visites-guidees-ansible -m raw all -a 'date'
+#
+# Usage ("ansible-playbook" mode):
+#
+#   ./visites-guidees-ansible -l prod
+#
+#
+# If you are unfamiliar with Ansible, read up on it at
+# - https://www.ansible.com/overview/how-ansible-works
+# - https://github.com/jdauphant/awesome-ansible
+
+cd "$(dirname "$0")"; cd "$(/bin/pwd)"
+
+git_current_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+case "$git_current_branch" in
+    "") : ;;
+    *) playbook_flags="$playbook_flags -e git_current_branch=$git_current_branch" ;;
+esac
+
+ensure_suitcase () {
+    if ! test -f ansible-deps-cache/.versions 2>/dev/null; then
+        curl https://raw.githubusercontent.com/epfl-si/ansible.suitcase/master/install.sh | \
+            SUITCASE_DIR=$PWD/ansible-deps-cache \
+            SUITCASE_PIP_EXTRA="bcrypt passlib PyMySQL kubernetes" \
+            SUITCASE_ANSIBLE_VERSION=9.5.1 \
+            SUITCASE_ANSIBLE_REQUIREMENTS=requirements.yml \
+            bash -x
+    fi
+
+    . "$PWD"/ansible-deps-cache/lib.sh
+    ensure_ansible_runtime
+}
+
+inventory_mode="test"
+inventories () {
+    case "$inventory_mode" in
+        *test*) echo "-i inventory/test.yml" ;;
+    esac
+    case "$inventory_mode" in
+        *prod*)    echo "-i inventory/prod.yml" ;;
+    esac
+}
+
+###########################################################################
+
+mode=ansible-playbook
+
+declare -a ansible_args
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+        --prod)
+            inventory_mode="test,prod"
+            shift ;;
+        --test)
+            inventory_mode="test"
+            shift ;;
+        -m) mode=ansible
+            ansible_args+=("-m")
+            shift ;;
+        -k) # Ignored for backwards compatibility; thanks to
+            # `keybase fs read`, we no longer care about Macs and
+            # their intermittent KBFS woes
+            shift 2 ;;
+        *)
+            ansible_args+=("$1")
+            shift ;;
+    esac
+done
+
+set -e
+
+ensure_suitcase
+case "$mode" in
+    ansible-playbook)
+        ansible-playbook $playbook_flags $(inventories) "${ansible_args[@]}" \
+                         $ansible_flags \
+                         playbook.yml
+        ;;
+    ansible)
+        ansible $(inventories) $ansible_flags "${ansible_args[@]}"
+        ;;
+esac

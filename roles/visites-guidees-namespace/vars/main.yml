@@ -1,0 +1,38 @@
+# --- Kubernetes -------------------------------------------------------------
+
+ansible_k8s_kubeconfig: >-
+  kubeconfigs/{{ inventory_hostname | regex_replace(':', '__') }}.yml
+
+# --- Quay -------------------------------------------------------------------
+
+ansible_quay_hostname: quay-its.epfl.ch
+
+quay_organization: svc0176
+
+quay_puller_secret_name: visites-guidees-quay-pull-secret
+
+quay_puller_credentials: >-
+  {{ lookup('pipe', 'keybase fs read /keybase/team/visitesguidees/Quay/puller.yml') | from_yaml }}
+
+# --- Application ------------------------------------------------------------
+
+visites_guidees_backend_secrets: "{{ lookup('pipe', 'keybase fs read /keybase/team/visitesguidees/Backend/' ~ inventory_environment ~ '/secrets.yml') | from_yaml }}"
+
+database_url: >-
+  postgresql://{{ visites_guidees_backend_secrets.database.user }}:{{ visites_guidees_backend_secrets.database.password }}@{{ visites_guidees_backend_secrets.database.host }}:{{ visites_guidees_backend_secrets.database.port }}/{{ visites_guidees_backend_secrets.database.name }}?schema=public
+
+entra_tenant_id: f6c2556a-c4fb-4ab1-a2c7-9e220df11c43
+
+openid_connect:
+  dev:
+    base_url: https://login.microsoftonline.com/{{ entra_tenant_id }}/v2.0
+    client_id: TODO-DEV-CLIENT-ID
+  test:
+    base_url: https://login.microsoftonline.com/{{ entra_tenant_id }}/v2.0
+    client_id: 53f08106-60d4-418d-9d61-3a66ba881337
+  prod:
+    base_url: https://login.microsoftonline.com/{{ entra_tenant_id }}/v2.0
+    client_id: TODO-PROD-CLIENT-ID
+
+visites_guidees_backend_image_tag: latest
+visites_guidees_frontend_image_tag: latest

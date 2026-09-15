@@ -1,0 +1,5 @@
+- name: Visites guidées on OpenShift
+  hosts: namespaces
+  gather_facts: no
+  roles:
+    - visites-guidees-namespace

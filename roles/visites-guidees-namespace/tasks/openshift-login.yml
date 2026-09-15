@@ -1,0 +1,27 @@
+# Log in to the various Kuberneteis unless credentials are still
+# valid.
+- name: Check credentials
+  changed_when: false
+  shell: |
+    export KUBECONFIG="{{ ansible_k8s_kubeconfig }}"
+    if oc get pods -n {{ inventory_namespace }} >/dev/null; then
+      echo "CREDENTIALS_STILL_VALID"
+      exit 0
+    fi
+  register: _k8s_login_check
+
+- name: "kubeconfigs/ directory"
+  file:
+    path: "kubeconfigs"
+    state: directory
+
+- name: Log in to OpenShift
+  when:
+  - >-
+    "CREDENTIALS_STILL_VALID" not in _k8s_login_check.stdout
+  shell: |
+    export KUBECONFIG="{{ ansible_k8s_kubeconfig }}"
+    rm "$KUBECONFIG"
+    oc login --web --server=https://api.{{ inventory_openshift.domain }}:6443 {{
+               "--insecure-skip-tls-verify" if (inventory_openshift.insecure | default(False)) else ""
+              }}

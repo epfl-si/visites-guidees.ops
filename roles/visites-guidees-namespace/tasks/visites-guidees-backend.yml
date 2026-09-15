@@ -1,0 +1,132 @@
+- name: ConfigMap/visites-guidees-backend
+  kubernetes.core.k8s:
+    kubeconfig: "{{ ansible_k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: visites-guidees-backend
+        namespace: "{{ inventory_namespace }}"
+      data:
+        AZURE_AD_TENANT_ID: "{{ entra_tenant_id }}"
+        AZURE_AD_CLIENT_ID: "{{ openid_connect[inventory_environment].client_id }}"
+        FRONTEND_URL: "https://{{ inventory_web_hostname }}"
+        API_EPFL_URL: https://api.epfl.ch/
+        MAIL_HOST: mail.epfl.ch
+        PORT: "3000"
+        NODE_ENV: production
+
+- name: Secret/visites-guidees-backend
+  kubernetes.core.k8s:
+    kubeconfig: "{{ ansible_k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      type: Opaque
+      metadata:
+        name: visites-guidees-backend
+        namespace: "{{ inventory_namespace }}"
+      stringData:
+        DATABASE_URL: "{{ database_url }}"
+        SERVICE_ACCOUNT_USERNAME: "{{ visites_guidees_backend_secrets.SERVICE_ACCOUNT.USERNAME }}"
+        SERVICE_ACCOUNT_PASSWORD: "{{ visites_guidees_backend_secrets.SERVICE_ACCOUNT.PASSWORD }}"
+
+- name: Deployment/visites-guidees-backend
+  kubernetes.core.k8s:
+    kubeconfig: "{{ ansible_k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: visites-guidees-backend
+        namespace: "{{ inventory_namespace }}"
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: visites-guidees-backend
+        template:
+          metadata:
+            labels:
+              app: visites-guidees-backend
+          spec:
+            serviceAccountName: visites-guidees
+            containers:
+              - name: visites-guidees-backend
+                image: "{{ ansible_quay_hostname }}/{{ quay_organization }}/visites-guidees-backend:{{ visites_guidees_backend_image_tag }}"
+                imagePullPolicy: Always
+                envFrom:
+                  - configMapRef:
+                      name: visites-guidees-backend
+                  - secretRef:
+                      name: visites-guidees-backend
+                resources:
+                  limits:
+                    memory: 1Gi
+                  requests:
+                    cpu: '{{ _cpu_request }}'
+                    memory: 1Gi
+                ports:
+                  - name: backend
+                    containerPort: 3000
+            imagePullSecrets:
+              - name: "{{ quay_puller_secret_name }}"
+  vars:
+    _cpu_request: "160m"
+
+- name: Service/visites-guidees-backend
+  kubernetes.core.k8s:
+    kubeconfig: "{{ ansible_k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: visites-guidees-backend
+        namespace: "{{ inventory_namespace }}"
+        labels:
+          app: visites-guidees-backend
+        annotations:
+          authors: isas-fsd
+      spec:
+        ports:
+          - port: 3000
+            protocol: TCP
+            targetPort: 3000
+        selector:
+          app: visites-guidees-backend
+        type: ClusterIP
+
+- name: Routes
+  with_items:
+    - name: visites-guidees-backend-api
+      path: "/api"
+      visibility: public-cf
+  kubernetes.core.k8s:
+    kubeconfig: "{{ ansible_k8s_kubeconfig }}"
+    definition:
+      apiVersion: v1
+      kind: Route
+      metadata:
+        name: "{{ item.name }}"
+        namespace: '{{ inventory_namespace }}'
+        labels:
+          app: "{{ item.name }}"
+          route: "{{ item.visibility | default('private') }}"
+        annotations:
+          haproxy.router.openshift.io/balance: roundrobin
+          haproxy.router.openshift.io/disable_cookies: 'true'
+      spec:
+        host: "{{ item.host | default(inventory_web_hostname) }}"
+        path: "{{ item.path }}"
+        to:
+          kind: Service
+          name: visites-guidees-backend
+        port:
+          targetPort: 3000
+        tls:
+          termination: edge
+          insecureEdgeTerminationPolicy: Redirect

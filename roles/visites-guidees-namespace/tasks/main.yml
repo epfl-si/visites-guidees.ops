@@ -1,0 +1,29 @@
+- name: Log in to OpenShift
+  import_tasks:
+    file: openshift-login.yml
+  tags:
+    - visites-guidees.k8s
+
+- include_tasks:
+    file: visites-guidees-pull-secret.yml
+    apply:
+      tags:
+        - visites-guidees.deployment.k8s
+  tags:
+    - visites-guidees.deployment.k8s
+
+- include_tasks:
+    file: visites-guidees-backend.yml
+    apply:
+      tags:
+        - visites-guidees.deployment.backend.k8s
+  tags:
+    - visites-guidees.deployment.backend.k8s
+
+- include_tasks:
+    file: visites-guidees-frontend.yml
+    apply:
+      tags:
+        - visites-guidees.deployment.frontend.k8s
+  tags:
+    - visites-guidees.deployment.frontend.k8s

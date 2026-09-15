@@ -1,0 +1,126 @@
+- name: ConfigMap/visites-guidees-frontend
+  kubernetes.core.k8s:
+    kubeconfig: "{{ ansible_k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: visites-guidees-frontend
+        namespace: "{{ inventory_namespace }}"
+      data:
+        12factor.json: >-
+          {{ _12factor | to_json }}
+  vars:
+    _12factor:
+      GUIDED_TOURS_ENTRA_SERVER_URL: "{{ openid_connect[inventory_environment].base_url }}"
+      GUIDED_TOURS_URL: "https://{{ inventory_web_hostname }}/"
+      GUIDED_TOURS_BACKEND_URL: "https://{{ inventory_web_hostname }}/api/"
+      GUIDED_TOURS_ENTRA_SCOPE: "openid {{ openid_connect[inventory_environment].client_id }}/.default"
+      GUIDED_TOURS_ENTRA_CLIENT_ID: "{{ openid_connect[inventory_environment].client_id }}"
+
+- name: ServiceAccount/visites-guidees
+  kubernetes.core.k8s:
+    kubeconfig: "{{ ansible_k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: visites-guidees
+        namespace: "{{ inventory_namespace }}"
+      imagePullSecrets:
+        - name: "{{ quay_puller_secret_name }}"
+
+- name: Deployment/visites-guidees-frontend
+  kubernetes.core.k8s:
+    kubeconfig: "{{ ansible_k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: visites-guidees-frontend
+        namespace: "{{ inventory_namespace }}"
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: visites-guidees-frontend
+        template:
+          metadata:
+            labels:
+              app: visites-guidees-frontend
+          spec:
+            serviceAccountName: visites-guidees
+            containers:
+              - name: visites-guidees-frontend
+                image: "{{ ansible_quay_hostname }}/{{ quay_organization }}/visites-guidees-frontend:{{ visites_guidees_frontend_image_tag }}"
+                imagePullPolicy: Always
+                volumeMounts:
+                  - name: 12factor
+                    mountPath: /config
+                resources:
+                  limits:
+                    memory: 256Mi
+                  requests:
+                    cpu: '{{ _cpu_request }}'
+                    memory: 256Mi
+                ports:
+                  - name: frontend
+                    containerPort: 3000
+            volumes:
+              - name: 12factor
+                configMap:
+                  name: visites-guidees-frontend
+            imagePullSecrets:
+              - name: "{{ quay_puller_secret_name }}"
+  vars:
+    _cpu_request: "160m"
+
+- name: Service/visites-guidees-frontend
+  kubernetes.core.k8s:
+    kubeconfig: "{{ ansible_k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: visites-guidees-frontend
+        namespace: "{{ inventory_namespace }}"
+        labels:
+          app: visites-guidees-frontend
+        annotations:
+          authors: isas-fsd
+      spec:
+        ports:
+          - port: 3000
+            protocol: TCP
+            targetPort: 3000
+        selector:
+          app: visites-guidees-frontend
+        type: ClusterIP
+
+- name: Route/visites-guidees-frontend
+  kubernetes.core.k8s:
+    kubeconfig: "{{ ansible_k8s_kubeconfig }}"
+    definition:
+      apiVersion: v1
+      kind: Route
+      metadata:
+        name: visites-guidees-frontend
+        namespace: '{{ inventory_namespace }}'
+        labels:
+          app: visites-guidees-frontend
+          route: public-cf
+      spec:
+        host: "{{ inventory_web_hostname }}"
+        path: /
+        to:
+          kind: Service
+          name: visites-guidees-frontend
+        port:
+          targetPort: 3000
+        tls:
+          termination: edge
+          insecureEdgeTerminationPolicy: Redirect
