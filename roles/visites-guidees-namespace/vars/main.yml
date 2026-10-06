@@ -24,15 +24,16 @@ database_url: >-
 entra_tenant_id: f6c2556a-c4fb-4ab1-a2c7-9e220df11c43
 
 openid_connect:
-  dev:
-    base_url: https://login.microsoftonline.com/{{ entra_tenant_id }}/v2.0
-    client_id: TODO-DEV-CLIENT-ID
   test:
     base_url: https://login.microsoftonline.com/{{ entra_tenant_id }}/v2.0
     client_id: 53f08106-60d4-418d-9d61-3a66ba881337
   prod:
     base_url: https://login.microsoftonline.com/{{ entra_tenant_id }}/v2.0
     client_id: TODO-PROD-CLIENT-ID
+
+mediacom_email:
+  test: visites-guidees@epfl.ch
+  prod: visites-guidees@epfl.ch
 
 visites_guidees_backend_image_tag: latest
 visites_guidees_frontend_image_tag: latest

@@ -14,6 +14,7 @@
         FRONTEND_URL: "https://{{ inventory_web_hostname }}"
         API_EPFL_URL: https://api.epfl.ch/
         MAIL_HOST: mail.epfl.ch
+        MEDIACOM_EMAIL: "{{ mediacom_email[inventory_environment] }}"
         PORT: "3000"
         NODE_ENV: production
 
