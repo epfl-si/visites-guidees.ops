@@ -5,7 +5,7 @@ namespaces:
       inventory_deployment_stage: test
       ansible_connection: local
       ansible_python_interpreter: "{{ ansible_playbook_python }}"
-      inventory_web_hostname: visites-guidees-test.fsd.epfl.ch
+      inventory_web_hostname: visites-guidees-test.epfl.ch
       inventory_environment: test
       inventory_openshift:
         domain: ocpitst0001.xaas.epfl.ch
