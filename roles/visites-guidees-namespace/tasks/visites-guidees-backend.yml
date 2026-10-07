@@ -105,7 +105,7 @@
   with_items:
     - name: visites-guidees-backend-api
       path: "/api"
-      visibility: public-cf
+      visibility: public
   kubernetes.core.k8s:
     kubeconfig: "{{ ansible_k8s_kubeconfig }}"
     definition:
@@ -113,13 +113,14 @@
       kind: Route
       metadata:
         name: "{{ item.name }}"
-        namespace: '{{ inventory_namespace }}'
+        namespace: "{{ inventory_namespace }}"
         labels:
           app: "{{ item.name }}"
           route: "{{ item.visibility | default('private') }}"
         annotations:
           haproxy.router.openshift.io/balance: roundrobin
           haproxy.router.openshift.io/disable_cookies: 'true'
+          haproxy.router.openshift.io/rewrite-target: /
       spec:
         host: "{{ item.host | default(inventory_web_hostname) }}"
         path: "{{ item.path }}"
