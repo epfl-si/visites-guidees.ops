@@ -12,6 +12,7 @@
         AZURE_AD_TENANT_ID: "{{ entra_tenant_id }}"
         AZURE_AD_CLIENT_ID: "{{ openid_connect[inventory_environment].client_id }}"
         FRONTEND_URL: "https://{{ inventory_web_hostname }}"
+        API_BASE_PATH: /api
         API_EPFL_URL: https://api.epfl.ch/
         MAIL_HOST: mail.epfl.ch
         MEDIACOM_EMAIL: "{{ mediacom_email[inventory_environment] }}"
@@ -68,7 +69,7 @@
                   limits:
                     memory: 1Gi
                   requests:
-                    cpu: '{{ _cpu_request }}'
+                    cpu: "{{ _cpu_request }}"
                     memory: 1Gi
                 ports:
                   - name: backend
@@ -119,7 +120,7 @@
           route: "{{ item.visibility | default('private') }}"
         annotations:
           haproxy.router.openshift.io/balance: roundrobin
-          haproxy.router.openshift.io/disable_cookies: 'true'
+          haproxy.router.openshift.io/disable_cookies: "true"
           haproxy.router.openshift.io/rewrite-target: /
       spec:
         host: "{{ item.host | default(inventory_web_hostname) }}"
