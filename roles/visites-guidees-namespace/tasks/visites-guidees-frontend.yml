@@ -112,7 +112,7 @@
         namespace: '{{ inventory_namespace }}'
         labels:
           app: visites-guidees-frontend
-          route: public-cf
+          route: public
       spec:
         host: "{{ inventory_web_hostname }}"
         path: /
