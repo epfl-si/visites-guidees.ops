@@ -11,7 +11,7 @@
       data:
         AZURE_AD_TENANT_ID: "{{ entra_tenant_id }}"
         AZURE_AD_CLIENT_ID: "{{ openid_connect[inventory_environment].client_id }}"
-        FRONTEND_URL: "https://{{ inventory_web_hostname }}"
+        FRONTEND_URL: "https://{{ inventory_web_hostname }} https://{{ inventory_web_hostname_en }}"
         API_BASE_PATH: /api
         API_EPFL_URL: https://api.epfl.ch/
         MAIL_HOST: mail.epfl.ch
