@@ -124,3 +124,27 @@
         tls:
           termination: edge
           insecureEdgeTerminationPolicy: Redirect
+
+- name: Route/guided-tours-frontend
+  kubernetes.core.k8s:
+    kubeconfig: "{{ ansible_k8s_kubeconfig }}"
+    definition:
+      apiVersion: v1
+      kind: Route
+      metadata:
+        name: guided-tours-frontend
+        namespace: "{{ inventory_namespace }}"
+        labels:
+          app: guided-tours-frontend
+          route: public
+      spec:
+        host: "{{ inventory_web_hostname_en }}"
+        path: /
+        to:
+          kind: Service
+          name: visites-guidees-frontend
+        port:
+          targetPort: 3000
+        tls:
+          termination: edge
+          insecureEdgeTerminationPolicy: Redirect
