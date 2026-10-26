@@ -14,8 +14,8 @@
   vars:
     _12factor:
       GUIDED_TOURS_ENTRA_SERVER_URL: "{{ openid_connect[inventory_environment].base_url }}"
-      GUIDED_TOURS_URL: "https://{{ inventory_web_hostname }}/"
-      GUIDED_TOURS_BACKEND_URL: "https://{{ inventory_web_hostname }}/api/"
+      GUIDED_TOURS_URL: "https://{{ inventory_web_hostname_fr }}/"
+      GUIDED_TOURS_BACKEND_URL: "https://{{ inventory_web_hostname_fr }}/api/"
       GUIDED_TOURS_ENTRA_SCOPE: "openid {{ openid_connect[inventory_environment].client_id }}/.default"
       GUIDED_TOURS_ENTRA_CLIENT_ID: "{{ openid_connect[inventory_environment].client_id }}"
 
@@ -101,44 +101,27 @@
           app: visites-guidees-frontend
         type: ClusterIP
 
-- name: Route/visites-guidees-frontend
+- name: Routes
+  with_items:
+    - name: visites-guidees-frontend
+      host: "{{ inventory_web_hostname_fr }}"
+      visibility: public
+    - name: guided-tours-frontend
+      host: "{{ inventory_web_hostname_en }}"
+      visibility: public
   kubernetes.core.k8s:
     kubeconfig: "{{ ansible_k8s_kubeconfig }}"
     definition:
       apiVersion: v1
       kind: Route
       metadata:
-        name: visites-guidees-frontend
-        namespace: '{{ inventory_namespace }}'
-        labels:
-          app: visites-guidees-frontend
-          route: public
-      spec:
-        host: "{{ inventory_web_hostname }}"
-        path: /
-        to:
-          kind: Service
-          name: visites-guidees-frontend
-        port:
-          targetPort: 3000
-        tls:
-          termination: edge
-          insecureEdgeTerminationPolicy: Redirect
-
-- name: Route/guided-tours-frontend
-  kubernetes.core.k8s:
-    kubeconfig: "{{ ansible_k8s_kubeconfig }}"
-    definition:
-      apiVersion: v1
-      kind: Route
-      metadata:
-        name: guided-tours-frontend
+        name: "{{ item.name }}"
         namespace: "{{ inventory_namespace }}"
         labels:
-          app: guided-tours-frontend
-          route: public
+          app: "{{ item.name }}"
+          route: "{{ item.visibility | default('private') }}"
       spec:
-        host: "{{ inventory_web_hostname_en }}"
+        host: "{{ item.host }}"
         path: /
         to:
           kind: Service
