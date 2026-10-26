@@ -5,7 +5,7 @@ namespaces:
       inventory_deployment_stage: production
       ansible_connection: local
       ansible_python_interpreter: "{{ ansible_playbook_python }}"
-      inventory_web_hostname: visites-guidees.epfl.ch
+      inventory_web_hostname_fr: visites-guidees.epfl.ch
       inventory_web_hostname_en: guided-tours.epfl.ch
       inventory_environment: prod
       inventory_openshift:
